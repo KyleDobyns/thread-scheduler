@@ -18,12 +18,33 @@
   }
 
 // TODO: to be implemented in this assignment
-#define capture( ) {							\
-  }
+#define capture() { \
+    register void *sp asm ("sp"); \
+    register void *bp asm ("bp"); \
+    cur_tcb->size = (int)((long long int)bp - (long long int)sp); \
+    cur_tcb->sp = sp; \
+    if (cur_tcb->stack == NULL || cur_tcb->size != (int)((long long int)bp - (long long int)sp)) { \
+        free(cur_tcb->stack); \
+        cur_tcb->stack = malloc(cur_tcb->size); \
+        if (!cur_tcb->stack) exit(1); \
+    } \
+    memcpy(cur_tcb->stack, sp, cur_tcb->size); \
+    thr_queue.push(cur_tcb); \
+}
+
 
 // TODO: to be implemented in this assignment    
-#define sthread_yield( ) {						\
-  }
+#define sthread_yield() { \
+    if (alarmed) { \
+        alarmed = false; \
+        if (!setjmp(cur_tcb->env)) { \
+            capture(); \
+            longjmp(scheduler_env, 1); \
+        } else { \
+            memcpy(cur_tcb->sp, cur_tcb->stack, cur_tcb->size); \
+        } \
+    } \
+}
 
 #define sthread_init( ) {					\
     if ( setjmp( cur_tcb->env ) == 0 ) {			\
@@ -112,4 +133,8 @@ static void scheduler( ) {
   longjmp( main_env, 2 );
 }
 
+
+// g++ driver.cpp -o sthread_test
+
+// ./sthread_test
 
